@@ -149,4 +149,4 @@ jobs:
           file: release-files/**/*.apk
           tag: ${{ inputs.release_tag }}
           file_glob: true
-          prerelease: true
+          prerelease: false
