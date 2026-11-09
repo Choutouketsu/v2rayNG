@@ -15,10 +15,12 @@ import kotlinx.coroutines.withContext
 
 object UpdateCheckerManager {
     suspend fun checkForUpdate(includePreRelease: Boolean = false): CheckUpdateResult = withContext(Dispatchers.IO) {
+        // 已硬编码绑定为你个人的仓库 API，确保更新只认准你自己的仓库
+        val baseUrl = "https://api.github.com/repos/Choutouketsu/v2rayNG/releases"
         val url = if (includePreRelease) {
-            AppConfig.APP_API_URL
+            baseUrl
         } else {
-            AppConfig.APP_API_URL.concatUrl("latest")
+            baseUrl.concatUrl("latest")
         }
 
         val proxyUsername = SettingsManager.getSocksUsername()
