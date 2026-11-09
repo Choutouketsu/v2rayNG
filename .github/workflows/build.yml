@@ -40,6 +40,22 @@ jobs:
         \
             ndkVersion = "26.1.10909125"' ${{ github.workspace }}/V2rayNG/app/build.gradle.kts
 
+    - name: Auto inject version from release_tag
+      if: github.event_name == 'workflow_dispatch' && inputs.release_tag != ''
+      run: |
+        TAG="${{ inputs.release_tag }}"
+        CLEAN_TAG="${TAG#v}" # 去掉开头的 v，例如 v2.3.15.1 变成 2.3.15.1
+        echo "Injecting version name: $CLEAN_TAG"
+        
+        # 自动将 app/build.gradle.kts 中的 versionName 替换为输入的标签版本
+        sed -i "s/versionName = \".*\"/versionName = \"$CLEAN_TAG\"/g" ${{ github.workspace }}/V2rayNG/app/build.gradle.kts
+        
+        # 自动将 versionCode 在原基础 +1 (将 755 改为 756，以此类推)
+        CURRENT_CODE=$(grep -m 1 "versionCode =" ${{ github.workspace }}/V2rayNG/app/build.gradle.kts | grep -o '[0-9]*')
+        NEW_CODE=$((CURRENT_CODE + 1))
+        echo "Updating versionCode from $CURRENT_CODE to $NEW_CODE"
+        sed -i "s/versionCode = $CURRENT_CODE/versionCode = $NEW_CODE/g" ${{ github.workspace }}/V2rayNG/app/build.gradle.kts
+
     - name: Restore cached libhevtun
       id: cache-libhevtun-restore
       uses: actions/cache/restore@v4
