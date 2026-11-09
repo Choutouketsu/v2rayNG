@@ -85,17 +85,12 @@ jobs:
         distribution: 'temurin'
         java-version: '17'
 
-    - name: Generate and Print Permanent Keystore
-      run: |
-        keytool -genkey -v -keystore my-release-key.jks \
-          -keyalg RSA -keysize 2048 -validity 10000 \
-          -alias my-key-alias -keypass mypassword123 -storepass mypassword123 \
-          -dname "CN=Choutouketsu, O=Personal, C=CN"
-        
-        echo "=== 请复制下方整段 Base64 字符串 ==="
-        base64 -w 0 my-release-key.jks
-        echo ""
-        echo "=== 复制结束 ==="
+    - name: Decode Keystore
+      uses: timheuer/base64-to-file@v2.0.0
+      id: android_keystore
+      with:
+        fileName: "android_keystore.jks"
+        encodedString: ${{ secrets.APP_KEYSTORE_BASE64 }}
 
     - name: Build APK
       run: |
@@ -104,10 +99,10 @@ jobs:
         chmod 755 gradlew
         ./gradlew licenseFdroidReleaseReport
         ./gradlew assembleRelease \
-          -Pandroid.injected.signing.store.file=${{ github.workspace }}/my-release-key.jks \
-          -Pandroid.injected.signing.store.password=mypassword123 \
-          -Pandroid.injected.signing.key.alias=my-key-alias \
-          -Pandroid.injected.signing.key.password=mypassword123
+          -Pandroid.injected.signing.store.file=${{ steps.android_keystore.outputs.filePath }} \
+          -Pandroid.injected.signing.store.password=${{ secrets.APP_KEYSTORE_PASSWORD }} \
+          -Pandroid.injected.signing.key.alias=${{ secrets.APP_KEY_ALIAS }} \
+          -Pandroid.injected.signing.key.password=${{ secrets.APP_KEY_PASSWORD }}
      
     - name: Upload arm64-v8a APK
       uses: actions/upload-artifact@v4
@@ -154,6 +149,7 @@ jobs:
           KEY=$(gpg --list-secret-keys --with-colons | awk -F: '/^fpr:/ {print $10; exit}')
           mkdir -p release-files
 
+          - name: Download APK artifacts
           find release -type f -name '*.apk' | while read apk; do
             cp "$apk" release-files/
             gpg --batch --yes --local-user "$KEY" --detach-sign --output "release-files/$(basename "$apk").sig" "$apk"
